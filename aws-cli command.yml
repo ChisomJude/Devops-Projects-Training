@@ -9,3 +9,6 @@ aws iam create-user --user-name chisomscatest2324
 
 #Verify policy was attached
 aws iam list-attached-user-policies --user-name chisomscatest2324
+
+#Create access key and secret
+aws iam create-access-key --user-name  chisomscatest2324
