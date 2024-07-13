@@ -1,0 +1,5 @@
+#create s3 bucket AWS CLIV2
+aws s3 mb s3://chisomscalagos22222
+
+#Create IAM uSer 
+aws iam create-user --user-name chisomscatest2324
