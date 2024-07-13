@@ -3,3 +3,9 @@ aws s3 mb s3://chisomscalagos22222
 
 #Create IAM uSer 
 aws iam create-user --user-name chisomscatest2324
+
+# Attach Policy to a user 
+ aws iam attach-user-policy --user-name chisomscatest2324 --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+#Verify policy was attached
+aws iam list-attached-user-policies --user-name chisomscatest2324
