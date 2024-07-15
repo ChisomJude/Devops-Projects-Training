@@ -13,3 +13,6 @@ aws iam list-attached-user-policies --user-name chisomscatest2324
 
 #Create access key and secret
 aws iam create-access-key --user-name  chisomscatest2324
+
+# Delete Multiple Bucket- works for empty bucket and bucket without any delete restriction
+aws s3 ls | cut -d" " -f 3 | xargs -I{} aws s3 rb s3://{} --force.
