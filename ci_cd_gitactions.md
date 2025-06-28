@@ -1,16 +1,4 @@
-# Beginner-Friendly CI/CD with Git and GitHub Actions
-
-## ✅ Objectives
-
-By the end of this lecture, you will understand:
-
-* What CI/CD means
-* Why we use Git for version control
-* How GitHub Actions helps automate our workflow
-* How to create a basic CI/CD pipeline using GitHub Actions
-* What platforms exist for CI/CD
-
----
+#  CI/CD with Git and GitHub Actions
 
 ## 💪 What is CI/CD?
 
