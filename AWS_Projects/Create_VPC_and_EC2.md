@@ -30,7 +30,7 @@ This guide walks you through creating a VPC with 2 subnets, a route table, an In
 
 ### 1.3 Configure VPC Settings
 - **Name tag**: Enter `my-vpc` (or your preferred name)
-- **IPv4 CIDR block**: Enter `10.0.0.0/16`
+- **IPv4 CIDR block**: Enter `10.0.0.0/28`
 - **IPv6 CIDR block**: Select **No IPv6 CIDR block**
 - **Tenancy**: Keep as **Default**
 - Click **Create VPC**
@@ -38,6 +38,8 @@ This guide walks you through creating a VPC with 2 subnets, a route table, an In
 Your VPC is now created!
 
 ---
+
+![alt text](image-6.png)
 
 ## Step 2: Create Internet Gateway (IGW)
 
@@ -49,15 +51,21 @@ Your VPC is now created!
 - **Name tag**: Enter `my-igw` (or your preferred name)
 - Click **Create Internet Gateway**
 
+![alt text](image-2.png)
+
+
 ### 2.3 Attach IGW to VPC
 - You'll see a green banner saying "Internet gateway created"
-- Click the **Attach to VPC** button
+- Click the **Attach to VPC** button or open the new create Internet Gateway > Actions > **Attach to VPC**
 - From the dropdown, select your VPC (`my-vpc`)
 - Click **Attach Internet Gateway**
 
  Your Internet Gateway is now attached to your VPC!
 
 ---
+![alt text](image-3.png)
+
+![alt text](image-4.png)
 
 ## Step 3: Create Subnets
 
@@ -71,10 +79,12 @@ Your VPC is now created!
 - **VPC ID**: Select your VPC (`my-vpc`)
 - **Subnet name**: Enter `public-subnet-1a`
 - **Availability Zone**: Select any zone (e.g., `us-east-1a`)
-- **IPv4 CIDR block**: Enter `10.0.1.0/24`
+- **IPv4 CIDR block**: Enter `10.0.0.0/28`
 - Click **Create Subnet**
 
  Public subnet created!
+
+![alt text](image-7.png)
 
 ### 3.2 Create Private Subnet
 
@@ -83,12 +93,14 @@ Your VPC is now created!
 - **VPC ID**: Select your VPC (`my-vpc`)
 - **Subnet name**: Enter `private-subnet-1a`
 - **Availability Zone**: Select the same or different zone
-- **IPv4 CIDR block**: Enter `10.0.2.0/24`
+- **IPv4 CIDR block**: Enter `10.0.0.16/28`
 - Click **Create Subnet**
 
  Private subnet created!
 
 ---
+
+![alt text](image-8.png)
 
 ## Step 4: Create Route Tables
 
@@ -116,35 +128,23 @@ Your VPC is now created!
 - Click **Save Routes**
 
 Public route table now routes traffic to IGW!
+![alt text](image-10.png)
 
 ### 4.3 Associate Public Subnet with Public Route Table
 
 #### Associate Route Table
-- Go to the **Subnet Associations** tab
+- Go to the Route table and click on **Subnet Associations** tab
 - Click **Edit Subnet Associations**
+![alt text](image-11.png)
 - Check the box next to your public subnet (`public-subnet-1a`)
 - Click **Save Associations**
 
 Public subnet is now associated with the public route table!
-
-### 4.4 Create Private Route Table (Optional but recommended)
-
-#### Navigate and Create
-- Click **Create Route Table**
-- **Name**: Enter `private-rt`
-- **VPC**: Select your VPC (`my-vpc`)
-- Click **Create Route Table**
-
-#### Associate Private Subnet
-- Select the private route table (`private-rt`)
-- Click **Subnet Associations** tab
-- Click **Edit Subnet Associations**
-- Check the box next to your private subnet (`private-subnet-1a`)
-- Click **Save Associations**
-
- Private subnet has its own route table (with only local routes)!
-
 ---
+
+Go back to your VPC  and change the Resource map
+
+![alt text](image-12.png)
 
 ## Step 5: Create Security Groups
 
@@ -188,7 +188,7 @@ Public subnet is now associated with the public route table!
 - **Port range**: Auto-filled as **22**
 - **Source**: Select **Anywhere-IPv4** (0.0.0.0/0) OR your IP for security
 - Click **Add Rule**
-
+- Add any other rule you think is necessary like your application port
 - Click **Save Rules**
 
 ### 5.3 Create Security Group for Private Subnet (Optional but recommended)
@@ -218,10 +218,10 @@ Public subnet is now associated with the public route table!
 
 Use this checklist to verify everything is set up correctly:
 
-- [ ] VPC created with CIDR `10.0.0.0/16`
+- [ ] VPC created with CIDR `10.0.0.0/24`
 - [ ] Internet Gateway created and attached to VPC
-- [ ] Public subnet created with CIDR `10.0.1.0/24`
-- [ ] Private subnet created with CIDR `10.0.2.0/24`
+- [ ] Public subnet created with CIDR `10.0.0.0/28`
+- [ ] Private subnet created with CIDR `10.0.0.16/28`
 - [ ] Public route table created with route to IGW (`0.0.0.0/0 → IGW`)
 - [ ] Public subnet associated with public route table
 - [ ] Private route table created (optional)
@@ -231,7 +231,7 @@ Use this checklist to verify everything is set up correctly:
 
 ---
 
-## Step 7: Testing Your Setup (Optional)
+## Step 7: Testing Your Setup- Create EC2 with the Subnet and security group
 
 ### Launch an EC2 Instance in Public Subnet
 1. Go to **EC2 Dashboard**
@@ -239,6 +239,8 @@ Use this checklist to verify everything is set up correctly:
 3. Under **Network Settings**, edit and select your VPC and public subnet
 4. Select your public security group, ensure you enable public IP
 5. Once running, the instance should have internet access
+
+![alt text](image-13.png)
 
 ### To SSH into your instance:
 ```bash
@@ -264,28 +266,6 @@ ssh -i your-key.pem ec2-user@your-instance-public-ip
 
 ---
 
-## Summary
-
-You've successfully created:
-- 1 VPC with CIDR `10.0.0.0/28`
-- 1 Subnets (1 public, 1 private)
-- 1 Internet Gateway attached to VPC
-- 1 Route Tables with proper associations
-- 1 Security Groups with appropriate rules
-
-Your VPC is now ready for deploying applications and EC2 instances!
-
----
-
-## Next Steps
-
-- Deploy EC2 instances in your subnets
-
-- Configure Elastic Load Balancer
-
-- Set up VPN for private access
-
----
 
 ## Reference Links
 
