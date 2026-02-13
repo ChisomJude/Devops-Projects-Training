@@ -213,7 +213,7 @@ A single wrong indentation will break your entire workflow. When in doubt, use a
 
 ---
 
-## Anatomy of a Workflow File
+## Workflow File
 
 Every workflow file lives in `.github/workflows/` and has a `.yml` or `.yaml` extension. Here is the skeleton that every workflow follows, with every section explained.
 
@@ -489,7 +489,7 @@ uses: actions/checkout@v4
 
 The version tag is critical. Always pin to at least a major version (`@v4`) to avoid breaking changes. For maximum security, you can pin to a full commit SHA.
 
-### Most Common Marketplace Actions (What They Do)
+### Most Common Marketplace Actions 
 
 **actions/checkout@v4** -- This is used in almost every workflow. It clones your repository code onto the runner so that subsequent steps can access your files. Without this, the runner has no access to your code.
 
