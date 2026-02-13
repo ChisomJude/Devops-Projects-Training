@@ -1,1 +1,1 @@
-# sca-project-training
+Devops Training Guide and Prjects
