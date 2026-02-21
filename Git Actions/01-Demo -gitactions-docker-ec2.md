@@ -9,7 +9,7 @@
 
 ```yml
 # The name shown in the GitHub Actions tab
-name: CI Docker - Build and Push Image to DockerHub
+name: CI- Workflow
 
 # on: defines when this workflow should trigger
 on:
@@ -71,34 +71,40 @@ jobs:
 - What it does: SSHes into both AWS servers and tells them to pull the latest
 - Docker image from DockerHub and run it as a container
 - This workflow only runs after ci-docker.yml finishes successfully
-```yaml
 
+```yaml
 # The name shown in the GitHub Actions tab
-name: CD Docker - Deploy Container to AWS Servers
+name: Deploy to Server
 
 # on: defines when this workflow should trigger
 on:
-  push:
-    # Only trigger when code is pushed to the main branch
+  workflow_run:
+    # This workflow listens for the CI Workflow to finish
+    # It will only trigger after the CI Workflow completes
+    workflows: ["CI Workflow"]
+    types:
+      # 'completed' means the CI workflow finished (success or failure)
+      - completed
     branches:
-      - main
+      # Only trigger when the CI workflow ran on the master branch
+      - master
 
 # jobs: the list of tasks to run
 jobs:
-
-  # This job is called "deploy"
   deploy:
-
     # Use a fresh GitHub-hosted Linux machine
     runs-on: ubuntu-latest
 
-    # needs: means this job waits for the build-and-push job in ci-docker.yml to pass
-    # If the image build failed, we do not want to deploy an outdated or broken image
-    needs: build-and-push
+    # IMPORTANT: Only deploy if the CI workflow actually SUCCEEDED
+    # workflow_run triggers on 'completed' which includes failures
+    # This if-condition filters to only successful runs
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
 
-      # Step 1: Set up the SSH key so we can connect to both AWS servers
+      # ──────────────────────────────────────────────────────
+      # STEP 1: Set up SSH key so we can connect to AWS servers
+      # ──────────────────────────────────────────────────────
       - name: Set up SSH key
         run: |
           # Create the .ssh directory if it does not already exist
@@ -106,93 +112,129 @@ jobs:
 
           # Write the private key from GitHub Secrets into a file
           # This is the same .pem key you use to SSH into your EC2 instances
-          
-          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/deploy_key.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key.pem
 
-          # Set the permission to 600 so only this user can read the key
-          # SSH will refuse to use the key if the permission is too open
+          # Set permission to 600 so only this user can read the key
+          # SSH will refuse the key if permissions are too open
           chmod 600 ~/.ssh/deploy_key.pem
 
-          # Add both server IPs to known_hosts
-          # This prevents SSH from asking "are you sure you want to connect?" interactively
-          ssh-keyscan -H ${{ secrets.SERVER_1_IP }} >> ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.SERVER_2_IP }} >> ~/.ssh/known_hosts
+          # Configure SSH to skip host key verification
+          # This prevents the interactive 'are you sure?' prompt
+          # that would hang the automated pipeline
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
 
-      # Step 2: Deploy the new Docker image on Server 1
+      # ──────────────────────────────────────────────────────
+      # STEP 2: Deploy the new Docker image on Server 1
       # We SSH into the server and run Docker commands there
+      # ──────────────────────────────────────────────────────
       - name: Deploy to Server 1
         run: |
-          ssh -i ~/.ssh/deploy_key.pem ${{ secrets.EC2_USER }}@${{ secrets.SERVER_1_IP }} << 'EOF'
+          # SSH into Server 1 using the private key
+          # -T disables pseudo-terminal allocation (not needed for scripts)
+          # -i specifies the identity (private key) file
+          # -o StrictHostKeyChecking=no skips host verification
+          # vars.EC2_USER is stored as a variable (not a secret)
+          # secrets.EC2_HOST1 is the IP address of Server 1
+          ssh -T -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ vars.EC2_USER }}@${{ secrets.EC2_HOST1 }} << 'EOF'
 
-            # Pull the latest version of the image from DockerHub
-            # This downloads the image that was just built and pushed by ci-docker.yml
-            # DOCKERHUB_USERNAME is passed as an environment variable below
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-load-balancer:latest
+            # Pull the latest image from DockerHub
+            # This downloads the image just built and pushed by CI
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/demo-appwithflask:latest
 
-            # Stop and remove the currently running container if one exists
-            # The container is named "flask-app" so we can find it by name
+            # Stop and remove the currently running container
             # || true means do not fail if no container is running yet
-            docker stop flask-app || true
-            docker rm flask-app || true
+            sudo docker stop demo-appwithflask || true
+            sudo docker rm demo-appwithflask || true
 
             # Start a new container from the updated image
-            # --name flask-app gives the container a name so we can manage it later
-            # -d means run in the background (detached mode)
-            # -p 80:80 maps port 80 on the server to port 80 inside the container
-            # This is how outside traffic reaches your Flask app inside the container
-            docker run --name flask-app -d -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/flask-load-balancer:latest
-
+            # --name gives the container a name for easy management
+            # -d runs in detached (background) mode
+            # -p 80:80 maps server port 80 to container port 80
+            sudo docker run --name demo-appwithflask -d -p 80:80 \
+              ${{ secrets.DOCKER_USERNAME }}/demo-appwithflask:latest
           EOF
 
-      # Step 3: Verify Server 1 is responding after the new container started
+      # ──────────────────────────────────────────────────────
+      # STEP 3: Verify Server 1 is responding after deployment
+      # ──────────────────────────────────────────────────────
       - name: Health check Server 1
         run: |
-          # Wait for the container to fully start before checking
-          sleep 5
+          # Wait 20 seconds for the container to fully start
+          sleep 20
 
-          # curl sends an HTTP request to the /health route
-          # -s is silent mode, no progress output
-          # -o /dev/null throws away the response body
-          # -w "%{http_code}" prints only the HTTP status code number
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.SERVER_1_IP }}/health)
+          # Trim any whitespace from the secret value
+          # Trailing spaces or newlines in secrets can break URLs
+          # tr -d '[:space:]' removes ALL whitespace characters
+          HOST=$(echo "${{ secrets.EC2_HOST1 }}" | tr -d '[:space:]')
+
+          # curl sends an HTTP request to the /health endpoint
+          # -s = silent mode (no progress output)
+          # -o /dev/null = discard the response body
+          # -w "%{http_code}" = print only the HTTP status code
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${HOST}/health)
 
           # 200 means the server responded successfully
-          # If not 200, something went wrong starting the container
+          # If not 200, something went wrong with the deployment
           if [ "$STATUS" != "200" ]; then
             echo "Server 1 health check failed. Status: $STATUS"
             exit 1
           fi
-
           echo "Server 1 is running. Status: $STATUS"
 
-      # Step 4: Deploy the new Docker image on Server 2
+      # ──────────────────────────────────────────────────────
+      # STEP 4: Deploy the new Docker image on Server 2
+      # ──────────────────────────────────────────────────────
       - name: Deploy to Server 2
         run: |
-          ssh -i ~/.ssh/deploy_key.pem ${{ secrets.EC2_USER }}@${{ secrets.SERVER_2_IP }} << 'EOF'
+          ssh -T -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ vars.EC2_USER }}@${{ secrets.EC2_HOST2 }} << 'EOF'
 
             # Pull the latest image from DockerHub onto Server 2
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-load-balancer:latest
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/demo-appwithflask:latest
 
             # Stop and remove the old container on Server 2
-            docker stop flask-app || true
-            docker rm flask-app || true
+            sudo docker stop demo-appwithflask || true
+            sudo docker rm demo-appwithflask || true
 
-            # Start a fresh container with the updated image on Server 2
-            docker run --name flask-app -d -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/flask-load-balancer:latest
-
+            # Start a fresh container with the updated image
+            sudo docker run --name demo-appwithflask -d -p 80:80 \
+              ${{ secrets.DOCKER_USERNAME }}/demo-appwithflask:latest
           EOF
 
-      # Step 5: Verify Server 2 is responding after the new container started
+      # ──────────────────────────────────────────────────────
+      # STEP 5: Verify Server 2 is responding after deployment
+      # ──────────────────────────────────────────────────────
       - name: Health check Server 2
         run: |
-          sleep 5
+          sleep 20
 
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.SERVER_2_IP }}/health)
+          # IMPORTANT: Use EC2_HOST2 here (not HOST1)
+          # A common mistake is copying from Server 1 and forgetting to change
+          HOST=$(echo "${{ secrets.EC2_HOST2 }}" | tr -d '[:space:]')
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${HOST}/health)
 
           if [ "$STATUS" != "200" ]; then
             echo "Server 2 health check failed. Status: $STATUS"
             exit 1
           fi
-
           echo "Server 2 is running. Status: $STATUS"
 ```
+
+## Error Encountered and Resolutions:
+1. Host key verification Error
+   introduced a skip to host key verification prompt  using the  `-T` and `-o` to my ssh command
+   ```sh
+   ssh -T -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ vars.EC2_USER }}@${{ secrets.EC2_HOST1 }} << 'EOF'
+   ```
+1. Docker permission error
+`permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post "http://%2Fvar%2Frun%2Fdocker.sock/v1.50/images/create?fromImage=docker.io%2F***%2Fdemo-appwithflask&tag=latest": dial unix /var/run/docker.sock: connect: permission denied`
+Resolution: Added sudo to all docker command 
+1. Server healthcheck Failure: 
+Resolution: increase sleep from 5s to 20s, suspected a whitespace on my EC2 host so I introduced a white space to filter to the healthcheck command `  HOST=$(echo "${{ secrets.EC2_HOST1 }}" | tr -d '[:space:]')`
