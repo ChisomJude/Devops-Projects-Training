@@ -233,7 +233,7 @@ Browser → "What is google.com?"
        → Recursive Resolver (ISP or 8.8.8.8)
        → Root Name Server (.)
        → TLD Server (.com)
-       → Authoritative Name Server (interswitch.com)
+       → Authoritative Name Server (google.com)
        → Returns: 41.58.20.10
 ```
 
