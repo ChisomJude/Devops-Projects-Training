@@ -37,6 +37,9 @@ By the end of this project, you will have:
                     └───────────────┘
 ```
 
+
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/1e032b95-001b-4be2-845c-77c1e942d1ff" />
+
 ---
 
 ##  Guide Sections
