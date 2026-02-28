@@ -106,7 +106,7 @@ SHOW DATABASES;
 EXIT;
 ```
 
->  We use `10.0.1.%` instead of `%` (all IPs) because we only want the web server (which is in the `10.0.1.0/24` subnet) to connect. This is the principle of **least privilege** — only give access to what actually needs it.
+>  We use `10.0.1.%` instead of `%` (all IPs) because we only want the web server (which is in the `10.0.1.0/24` subnet) to connect. This is the principle of **least privilege** — only give access to what actually needs it.  ENSURE THE SUBNET IS SAME AS YOUR WEB SERVER
 
 ---
 
@@ -125,7 +125,7 @@ bind-address = 127.0.0.1
 
 Change it to:
 ```
-bind-address = 0.0.0.0
+bind-address = 0.0.0.0 
 ```
 
 >  `0.0.0.0` means "accept connections on all network interfaces." This is safe because our security group already blocks port 3306 from everything except `lamp-web-sg`.
@@ -196,7 +196,7 @@ EXIT;
 
 ---
 
-##  Check Your Work
+##  Checks & TROUBLESHOOTING
 
 | Task | Command to Verify |
 |------|-------------------|
@@ -204,7 +204,21 @@ EXIT;
 | Database exists | `SHOW DATABASES;` in mysql shell |
 | App user exists | `SELECT user, host FROM mysql.user;` |
 | Web server can connect | `mysql -h <DB_PRIVATE_IP> -u lampuser -p lampdb` from web server |
+| login to the DB | sudo mysql|
 
 ---
+
+
+
+**Drop user and recreate it if needed (on ur DB Server)**
+
+```
+DROP USER 'lampuser'@'localhost';
+CREATE USER 'lampuser'@'10.0.1.%' IDENTIFIED BY 'yourpassword';
+GRANT ALL PRIVILEGES ON lampdb.* TO 'lampuser'@'10.0.1.%';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
 
 >  Database ready! Move on to **[Section 04 → App Setup](./04-app-setup.md)**
