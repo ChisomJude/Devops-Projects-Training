@@ -151,7 +151,7 @@ The password never appears in your code, your Dockerfile, or your logs.
 
 ---
 
-##  Check Your Work
+##  Checks & Troubleshooting
 
 ```bash
 # Container is running
@@ -162,6 +162,11 @@ curl http://localhost:5000/health
 
 # App shows DB connected
 curl http://localhost:5000/
+
+#Connect to DB from your websever
+mysql -h <db_ip> -u lampuser -p 
+or
+curl -v telnet://db_ip:3306 
 ```
 
 ---
