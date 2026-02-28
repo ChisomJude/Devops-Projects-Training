@@ -72,7 +72,14 @@ sudo docker run -d \
   yourdockerhubusername/lamp-demo:latest
 ```
 
->  Replace the values above with your actual DB private IP, username, and password.
+> If your app isn't on DockerHub yet, use git to clone into the server, build, and run ur app
+
+```
+git clone url
+cd into the folder and do 
+docker login #optional if you intend to push ur image to Docker Hub
+docker build -t urusername/lampstack:latest .
+```
 
 ---
 
