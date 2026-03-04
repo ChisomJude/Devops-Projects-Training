@@ -30,9 +30,10 @@ Think of it like a bouncer at a club — the security group decides who gets in.
    |------|----------|------|--------|-----|
    | HTTP | TCP | 80 | `0.0.0.0/0` | Anyone can visit the website |
    | HTTPS | TCP | 443 | `0.0.0.0/0` | For future SSL setup |
-   | SSH | TCP | 22 | `My IP` | Only YOU can SSH in |
+   | SSH | TCP | 22 | `My IP` or `0.0.0.0/0` | Only YOU can SSH in or anyone |
 
    >  For SSH, always choose **My IP** — not `0.0.0.0/0`. Leaving SSH open to the world is a major security risk.
+   > But for Test cases like this 0.0.0.0/0 isnt bad. In production use ur Network or VPC CIDR Range
 
 3. Click **Create Security Group**
 
@@ -55,7 +56,7 @@ Think of it like a bouncer at a club — the security group decides who gets in.
    | MySQL/Aurora | TCP | 3306 | `lamp-web-sg` | Only the web server can talk to MySQL |
    | SSH | TCP | 22 | `My IP` | Only YOU can SSH in (for setup) |
 
-   >  For the MySQL rule, instead of entering an IP address, you can select another Security Group as the source. This means "only EC2 instances that have `lamp-web-sg` attached can connect on port 3306." This is much better than hardcoding IPs.
+   >  For the MySQL rule, instead of entering an IP address, you can select another Security Group as the source. This means "only EC2 instances that have `lamp-web-sg` attached can connect on port 3306." This is much better than hardcoding IPs. For SSH, you may consider using 0.0.0.0/0 since this is a test
 
 3. Click **Create Security Group**
 
